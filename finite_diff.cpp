@@ -11,6 +11,9 @@ using namespace std;
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
 
 void print_to_file(const char* , double* , double*, int);
+double n_sq(int, int, int, double, double);
+double gaussian(int, int);
+
 
 int main(){
 
@@ -40,17 +43,13 @@ int main(){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(n1_sq - 2*factor);              // left boundary 
+    d.push_back(gaussian(0, N) - 2*factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        if(i<left || i>=right){
-            d.push_back(n1_sq - 2*factor);
-        }
-        else{
-            d.push_back(n2_sq - 2*factor);
-        }
+        d.push_back(gaussian(i, N) - 2*factor);
     }
-    d.push_back(n1_sq - 2*factor);              // right boundary
-    
+    d.push_back(gaussian(N, N) - 2*factor);              // right boundary
+   
+    cout << "Gaussian(N) = " << gaussian(0.5*N, N) << endl; 
     // set up off diagonal elements
     for(i=0; i<N-1; i++){
         offd.push_back(factor);
@@ -110,10 +109,22 @@ Size is the size of the arrays var1/2
 
 }
 
-double ref_ind(double x, int N, double ratio){
+double n_sq(int x, int left, int right, double n1_sq, double n2_sq){
 /*
 Returns refractive index function
 */
-    if(x 
+    if(x < left || x>= right){
+        return n1_sq;
+    }
+    else{
+        return n2_sq;
+    }
 
+}
+
+double gaussian(int x, int N){
+/*
+ Returns squared gaussian which is centred at N/2
+ */
+    return 9.0*exp(-pow(x-0.5*N, 2)*5e10)*exp(-pow(x-0.5*N, 2)*5e10);
 }
