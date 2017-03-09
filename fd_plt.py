@@ -20,7 +20,7 @@ def plotter(save, pltname):
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
         ax1.plot(data[:, 0], data[:, 1], 'r-', label="Mode")
-        ax2.plot(x, 3*np.exp(-x*x*5e10), 'b-', label="Waveguide")
+        ax2.plot(x, 3-7.5e10*x*x, 'b-', label="Waveguide")
         ax1.set_xlabel("x")
         ax1.set_ylabel("E(x)")
         ax2.set_ylabel("n(x)")
@@ -28,8 +28,8 @@ def plotter(save, pltname):
         #plt.plot(0.000004*np.ones(100), np.linspace(-.1, 0.1, 100), 'k--')
         
         if save:
-            ax1.legend(fontsize=11, loc=1)
-            ax2.legend(fontsize=11, loc=2)
+            ax2.legend(fontsize=11, loc=1)
+            ax1.legend(fontsize=11, loc=2)
             plt.savefig("./plots/{:s}TE{:d}_fd.jpg".format(pltname, mode))
             plt.close()
         else:
@@ -43,7 +43,7 @@ def plotter(save, pltname):
 if __name__ =='__main__':
 
     options = ['s', 'p']
-    pltname = 'gaussian'
+    pltname = 'inv_parabola'
 
     if (len(sys.argv) > 1) and (sys.argv[1] in options):
         if sys.argv[1] == 's':

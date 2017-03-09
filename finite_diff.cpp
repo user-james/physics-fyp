@@ -12,7 +12,8 @@ extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, i
 
 void print_to_file(const char* , double* , double*, int);
 double n_sq(int, int, int, double, double);
-double gaussian(int, int);
+double gaussian_sq(int, int);
+double parabola_sq(double);
 
 
 int main(){
@@ -30,6 +31,7 @@ int main(){
     double k = pi/1.55e-6;
     double n1_sq = pow(3.0, 2), n2_sq = pow(3.1, 2);
     double step = 1e-7;
+    double start = -8e-5;
     double factor = 1/(k*k*step*step);
     double ratio = 0.05;                         // defines ratio of domain to be given to waveguide (fixed refractive index only)
 
@@ -43,13 +45,13 @@ int main(){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(gaussian(0, N) - 2*factor);              // left boundary 
+    d.push_back(parabola_sq(start) - 2*factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        d.push_back(gaussian(i, N) - 2*factor);
+        d.push_back(parabola_sq(i*step + start) - 2*factor);
     }
-    d.push_back(gaussian(N, N) - 2*factor);              // right boundary
+    d.push_back(parabola_sq(N*step + start) - 2*factor);              // right boundary
    
-    cout << "Gaussian(N) = " << gaussian(0.5*N, N) << endl; 
+    cout << "Gaussian(N) = " << parabola_sq(2e-5) << endl; 
     // set up off diagonal elements
     for(i=0; i<N-1; i++){
         offd.push_back(factor);
@@ -122,9 +124,17 @@ Returns refractive index function
 
 }
 
-double gaussian(int x, int N){
+double gaussian_sq_(int x, int N){
 /*
  Returns squared gaussian which is centred at N/2
  */
     return 9.0*exp(-pow(x-0.5*N, 2)*5e10)*exp(-pow(x-0.5*N, 2)*5e10);
+}
+
+double parabola_sq(double x){
+/*
+ Returns squared inverse parabola centred at N/2
+ */
+    return pow(3.0 - 7.5e9*x*x, 2);
+
 }
