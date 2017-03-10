@@ -10,7 +10,7 @@ using namespace std;
 
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
 
-void print_to_file(const char* , double* , double*, int);
+void print_to_file(const char* , vector<double> & , vector<double> &, int);
 double n_sq(int, int, int, double, double);
 double gaussian_sq(double);
 double parabola_sq(double);
@@ -20,7 +20,9 @@ int main(){
 
     int i = 0;
     int mode = 0;
-    char filename[30];
+    char modefile[30];
+    char indicesfile[30];
+    char store_evalues[5];
     
     // parameters for lapack
     char job = 'V';
@@ -75,7 +77,7 @@ int main(){
 
         if(mode < 0){break;}
 
-        sprintf(filename, "./data/TE%d.txt", mode);
+        sprintf(modefile, "./modes/TE%d.txt", mode);
         // creates subvector containing one eigenvector
         vector<double> efield(ev.begin() + N*(N-mode-1), ev.begin() + N*(N-mode));
         
@@ -86,14 +88,23 @@ int main(){
         }
 
         // function to print arrays to file for plotting
-        print_to_file(filename, &distance[0], &efield[0], N);
+        print_to_file(modefile, distance, efield, N);
+    }
+
+    cout << "Print E-values to file? (y/n)  " << endl;
+    cin >> store_evalues;
+
+    if(store_evalues[0] == 'y'){
+        vector<double> empty;
+        sprintf(indicesfile, "./effective_indices/parabola.txt");
+        print_to_file(indicesfile, d, empty, 20); 
     }
 
     return 0;
 }
 
 
-void print_to_file(const char* filename, double *var1, double *var2, int size){
+void print_to_file(const char* filename, vector<double> &var1, vector<double> &var2, int size){
 /* 
 Prints data stored in var1 and var2 in two column format in the 
 file called 'filename', where the length of the arrays var1/2 must
@@ -103,10 +114,17 @@ Size is the size of the arrays var1/2
     ofstream myfile(filename);
     int i = 0;
 
-    for(i=0; i<size; i++){
-        myfile << var1[i] << "\t" << var2[i] << endl;
+    if(var2.empty()){
+        int total = var1.size();
+        for(i=total-1; i>=total - size; i--){
+            myfile << var1[i] << endl;
+        }
     }
-
+    else{
+        for(i=0; i<size; i++){
+            myfile << var1[i] << "\t" << var2[i] << endl;
+        }
+    }
     myfile.close();
 
 }

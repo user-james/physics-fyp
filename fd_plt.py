@@ -13,7 +13,7 @@ def plotter(save, pltname):
         if mode < 0:
             break
 
-        data = np.genfromtxt("./data/TE{:d}.txt".format(mode))
+        data = np.genfromtxt("./modes/TE{:d}.txt".format(mode))
         
         x = np.linspace(data[0,0], data[-1,0], 801)
         xin = x[300:501]
