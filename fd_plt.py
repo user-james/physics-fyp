@@ -15,12 +15,18 @@ def plotter(save, pltname):
 
         data = np.genfromtxt("./data/TE{:d}.txt".format(mode))
         
-        x = np.linspace(data[0, 0], data[-1, 0], 500)
-        
+        x = np.linspace(data[0,0], data[-1,0], 801)
+        xin = x[300:501]
+        xleft = x[:300]
+        xright = x[501:]
+
+
         fig, ax1 = plt.subplots()
         ax2 = ax1.twinx()
         ax1.plot(data[:, 0], data[:, 1], 'r-', label="Mode")
-        ax2.plot(x, 3-7.5e10*x*x, 'b-', label="Waveguide")
+        ax2.plot(xin, inv_para(xin), 'b-', label="Waveguide")
+        ax2.plot(xleft, np.ones(300), 'b-')
+        ax2.plot(xright, np.ones(300), 'b-')
         ax1.set_xlabel("x")
         ax1.set_ylabel("E(x)")
         ax2.set_ylabel("n(x)")
@@ -37,7 +43,13 @@ def plotter(save, pltname):
             ax2.legend(fontsize=11, loc=1)
             plt.show()
 
+def inv_para(x):
+    '''
+    Function that forms an inverse parabola between [-limit, +limit]
+    The function is equal to 1 outside this limit
+    '''
 
+    return 3-5e9*x*x
 
 
 if __name__ =='__main__':

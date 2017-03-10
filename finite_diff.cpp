@@ -12,7 +12,7 @@ extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, i
 
 void print_to_file(const char* , double* , double*, int);
 double n_sq(int, int, int, double, double);
-double gaussian_sq(int, int);
+double gaussian_sq(double);
 double parabola_sq(double);
 
 
@@ -45,11 +45,11 @@ int main(){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(parabola_sq(start) - 2*factor);              // left boundary 
+    d.push_back(gaussian_sq(start) - factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        d.push_back(parabola_sq(i*step + start) - 2*factor);
+        d.push_back(gaussian_sq(i*step + start) - 2*factor);
     }
-    d.push_back(parabola_sq(N*step + start) - 2*factor);              // right boundary
+    d.push_back(gaussian_sq(N*step + start) - factor);              // right boundary
    
     cout << "Gaussian(N) = " << parabola_sq(2e-5) << endl; 
     // set up off diagonal elements
@@ -124,17 +124,24 @@ Returns refractive index function
 
 }
 
-double gaussian_sq_(int x, int N){
+double gaussian_sq(double x){
 /*
  Returns squared gaussian which is centred at N/2
  */
-    return 9.0*exp(-pow(x-0.5*N, 2)*5e10)*exp(-pow(x-0.5*N, 2)*5e10);
+    return 9.0*exp(-pow(x, 2)*5e10)*exp(-pow(x, 2)*5e10);
+    //return 9.0*exp(-pow(x-0.5*N, 2)*5e10)*exp(-pow(x-0.5*N, 2)*5e10);
 }
 
 double parabola_sq(double x){
 /*
  Returns squared inverse parabola centred at N/2
+ Rather than go negative, this function is discontinuous at +/- 2e-5
+ where it goes to zero.
  */
-    return pow(3.0 - 7.5e9*x*x, 2);
-
+    if(x < -2e-5 || x>=2e-5){
+        return pow(3.0 - 5e9*x*x, 2);
+    }
+    else{
+        return 1;
+    }
 }
