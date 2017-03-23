@@ -40,7 +40,14 @@ int main(){
 
 
 void square_guide_setup(vector< vector<double> > &eps , int dim, double centre_ratio, double n_out, double n_in){
-    
+/*
+ * This function takes in an empty matrix and fills it with a symmetric square wave guide based on the size
+ * of ratio you want in the wave guide
+ *
+ * Note: always makes a symmetric square waveguide but it may not be the correct ratio is the dimension 
+ * passed in doesn't allow for a symmetric square wave guide of that ratio
+ *
+ */ 
     int left, right, i = 0, j = 0;
     left = dim * (1. - centre_ratio) / 2;
     right = dim  - 1 - left;
