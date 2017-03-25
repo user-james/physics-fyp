@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <string.h>
 #include <fstream>
 #include <cmath>
@@ -11,26 +12,37 @@ using namespace std;
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
 
 void square_guide_setup(vector<double> &, int, double, double, double);
-
+void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 
 int main(){
     
 
-    int dim = 4, i = 0, j=0;
-    
+    int dim = 3, i = 0, j=0;
+    int n = dim*dim;
      
     cout << "Enter size of square matrix: ";
     cin >> dim;
-    vector<double> eps(dim*dim + 2, 0);
-
+    vector<double> eps(dim*dim, 0);
+    vector<double> a(n*n, 0);
+    
+    cout << "in main" << endl;
     double ratio = 1/3.0;
     double n_out = 1.4, n_in = 1.5;
-
+    
     square_guide_setup(eps, dim, ratio, n_out, n_in);
+    fd_matrix(a, eps, dim, 1., 1., 1.);
 
     for(i=0; i<dim*dim; i++){
         if(i%dim == 0){cout << endl;}       
         cout << eps[i] << "\t";
+    }
+
+
+    cout << "\n\n\n\n\n";
+    cout << setprecision(2);
+    for(i=0; i<n*n; i++){
+        if(i%n == 0){cout << endl;}       
+        cout << a[i] << "\t";
     }
 
     cout << endl;
@@ -68,7 +80,7 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
 }
 
 
-void fd_matrix(double *a, vector< vector<double> > &eps, int dim, double dx, double dy, double k){
+void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, double dy, double k){
 /*
  * IN:
  *      a -> vector of dimension dim^4 filled with just zeros (represents FD matrix)
@@ -78,43 +90,68 @@ void fd_matrix(double *a, vector< vector<double> > &eps, int dim, double dx, dou
  *      dy -> step in y direction
  *      k -> wave vector
  *
- * MODIFIED:
+ * OUT:
  *      a -> vector now filled with elements of FD matrix to be passed into the lapack routine
  *           stored as a vector in order to be compatible with the LAPACK routine
  */
+    int n = dim * dim;
     int i = 0, j=0;
     double a1 = 1/(dx*dx);
     double a2 = 1/(dx*dx);
-    double a3[dim*dim];
-    double a4[dim*dim];
-    double a5[dim*dim];
-
+    double a3[n*n];
+    double a4[n*n];
+    double a5[n*n];
 
     /* INITIALIZING MULTIPLIERS */
-    for(i=0; i<dim*dim; i++){
+    for(i=0; i<n*n; i++){
         if(i == 0){
             a3[i] = 1/(dy*dy);
-            a4[i] = 1/(dy*dy) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i];
+            a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
         }
         else if(i ==dim*dim-1){
-            a3[i] = 1/(dy*dy) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+            a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
             a4[i] = 1/(dy*dy);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i];
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
         }
         else{
-            a3[i] = 1/(dy*dy) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
-            a4[i] = 1/(dy*dy) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i];
+            a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
+            a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
         }
     }
 
+    for(i=0; i<n*n; i++){
+        cout << a3[i] << endl;
+    }
+    
     /* CONTRUCTING MATRIX */
-    for(i=0; i < dim*dim; i++){
-        for(j=0; j<dim; j++){
-            if(i >= dim && i < dim*(dim -1)){
-            
-            }
+    for(i=0; i < n; i++){
+        if( i == 0){
+            a[0] = a5[i];
+            a[1] = a4[i*n + 1];
+            a[dim] = a2;
+        }
+        else if(i == n -1){
+            a[i] = a5[i*dim + i];
+            a[i-1] = a3[i*dim + i -1];
+            a[i*n + i - dim] = a3[i*n + i - dim];
+        }else if(i < dim && i !=0){
+            a[i*n + i -1] = a3[i*n + i -1];
+            a[i*n + i] = a5[i*n + i];
+            a[i*n + i+1] = a4[i*n + i+1];
+            a[i*n + i - dim] = a2;            
+        }else if(i >= n - dim){
+            a[i*n - i + dim] = a1;
+            a[i*n + i -1] = a3[i*n + i -1];
+            a[i*n + i] = a5[i*n + i];
+            a[i*n + i+1] = a4[i*n + i+1];
+        }else{
+            a[i*n - i + dim] = a1;
+            a[i*n + i -1] = a3[i*n + i -1];
+            a[i*n + i] = a5[i*n + i];
+            a[i*n + i+1] = a4[i*n + i+1];
+            a[i*n + i - dim] = a2; 
         }
     }
 }  
