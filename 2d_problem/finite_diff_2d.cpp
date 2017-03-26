@@ -12,6 +12,7 @@ using namespace std;
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
 extern "C" void dsyev_(char* JOB, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* INFO);
 
+void print_to_file(const char*, vector<double> &, vector<double> &, int);
 void square_guide_setup(vector<double> &, int, double, double, double);
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 
@@ -20,7 +21,10 @@ int main(){
     /* PROGRAM PARAMETERS */ 
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
+    double k = pi/1.55e-6;
+    double step = 1e-7;
     vector<double> eps(n, 0);
+    char vectorfile[30];
 
     /* LAPACK PARAMETERS */
     char job = 'V';
@@ -39,13 +43,13 @@ int main(){
     double n_out = 1.4, n_in = 1.5;
     
     square_guide_setup(eps, dim, ratio, n_out, n_in);
-    fd_matrix(a, eps, dim, 1., 1., 1.);
+    fd_matrix(a, eps, dim, step, step, k);
 
     dsyev_(&job, &uplo, &n, &a[0], &lda, &w[0], &work[0], &lwork, &info);
     if(info == 0){
-        cout << "Success" << endl;
+        cout << "Solution Found" << endl;
     }else{
-        cout << "LAPACK Failed" << endl;
+        cout << "LAPACK Failed\nFORTRAN routine exited with INFO = "<< info << endl;
     }    
 
 /*
@@ -61,11 +65,42 @@ int main(){
         cout << a[i] << "\t";
     }*/
 
+    cout << "Printing first Eigenvector to file" << endl;
+    vector<double> efield(a.begin() + n*(n-1), a.begin() + n*(n));
+    vector<double> distance;
+    for(i=int(-n/2); i<int(n/2); i++){
+        distance.push_back(i*step);
+    }
+
+    sprintf(vectorfile, "./TM%d.txt", 0);
+    print_to_file(vectorfile, distance, efield, n);
 
     return 0;
 }
 
+void print_to_file(const char* filename, vector<double> &var1, vector<double> &var2, int size){
+    /* 
+     * Prints data stored in var1 and var2 in two column format in the 
+     * file called 'filename', where the length of the arrays var1/2 must
+     * be the same.
+     * Size is the size of the arrays var1/2 
+     * */
+    ofstream myfile(filename);
+    int i = 0;
+    if(var2.empty()){
+        int total = var1.size();
+        for(i=total-1; i>=total - size; i--){
+            myfile << var1[i] << endl;
+        }
+    }
+    else{
+        for(i=0; i<size; i++){
+            myfile << var1[i] << "\t" << var2[i] << endl;
+        }
+    }
+    myfile.close();
 
+}
 
 void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, double n_out, double n_in){
 /*
