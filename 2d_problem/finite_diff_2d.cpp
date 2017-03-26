@@ -10,42 +10,57 @@
 using namespace std;
 
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
+extern "C" void dsyev_(char* JOB, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* INFO);
 
 void square_guide_setup(vector<double> &, int, double, double, double);
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 
 int main(){
     
-
-    int dim = 3, i = 0, j=0;
+    /* PROGRAM PARAMETERS */ 
+    int dim = 40, i = 0, j=0;
     int n = dim*dim;
-     
-    cout << "Enter size of square matrix: ";
-    cin >> dim;
-    n = dim*dim;
-    vector<double> eps(dim*dim, 0);
+    vector<double> eps(n, 0);
+
+    /* LAPACK PARAMETERS */
+    char job = 'V';
+    char uplo = 'U';
+    int N = n;
     vector<double> a(n*n, 0);
+    int lda = n;
+    vector<double> w(n, 0);
+    int lwork = 3*n -1;
+    vector<double> work(lwork, 0);
+    int info;
+
+
     
-    double ratio = 1/3.0;
+    double ratio = 1/25.0;
     double n_out = 1.4, n_in = 1.5;
     
     square_guide_setup(eps, dim, ratio, n_out, n_in);
     fd_matrix(a, eps, dim, 1., 1., 1.);
 
+    dsyev_(&job, &uplo, &n, &a[0], &lda, &w[0], &work[0], &lwork, &info);
+    if(info == 0){
+        cout << "Success" << endl;
+    }else{
+        cout << "LAPACK Failed" << endl;
+    }    
+
+/*
     for(i=0; i<dim*dim; i++){
         if(i%dim == 0){cout << endl;}       
         cout << eps[i] << "\t";
     }
-
 
     cout << "\n\n\n\n\n";
     cout << setprecision(2);
     for(i=0; i<n*n; i++){
         if(i%n == 0){cout << endl;}       
         cout << a[i] << "\t";
-    }
+    }*/
 
-    cout << endl;
 
     return 0;
 }
@@ -98,9 +113,9 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
     int i = 0, j=0;
     double a1 = 1/(dx*dx);
     double a2 = 1/(dx*dx);
-    double a3[n*n];
-    double a4[n*n];
-    double a5[n*n];
+    vector<double> a3(n*n, 0);
+    vector<double> a4(n*n, 0);
+    vector<double> a5(n*n, 0);
 
     /* INITIALIZING MULTIPLIERS */
     for(i=0; i<n*n; i++){
