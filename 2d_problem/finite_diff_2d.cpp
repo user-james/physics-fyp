@@ -12,14 +12,14 @@ using namespace std;
 extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, int* VDIM, double* WORK, int* INFO);
 extern "C" void dsyev_(char* JOB, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* INFO);
 
-void print_to_file(const char*, vector<double> &, vector<double> &, int);
+void print_to_file_3d(const char*, vector<double> &, vector<double> &, vector<double> &, int);
 void square_guide_setup(vector<double> &, int, double, double, double);
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 100, i = 0, j=0;
+    int dim = 3, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
     double step = 1e-7;
@@ -43,42 +43,48 @@ int main(){
     double n_out = 1.4, n_in = 1.5;
     
     square_guide_setup(eps, dim, ratio, n_out, n_in);
-    fd_matrix(a, eps, dim, step, step, k);
-
+    fd_matrix(a, eps, dim, 1, 1, 1);
+/*
     dsyev_(&job, &uplo, &n, &a[0], &lda, &w[0], &work[0], &lwork, &info);
     if(info == 0){
         cout << "Solution Found" << endl;
     }else{
         cout << "LAPACK Failed\nFORTRAN routine exited with INFO = "<< info << endl;
     }    
+*/
 
-/*
     for(i=0; i<dim*dim; i++){
         if(i%dim == 0){cout << endl;}       
         cout << eps[i] << "\t";
     }
 
     cout << "\n\n\n\n\n";
-    cout << setprecision(2);
+    cout << setprecision(3);
     for(i=0; i<n*n; i++){
         if(i%n == 0){cout << endl;}       
         cout << a[i] << "\t";
-    }*/
+    }
+    cout << endl;
 
+    /*
     cout << "Printing first Eigenvector to file" << endl;
     vector<double> efield(a.begin() + n*(n-1), a.begin() + n*(n));
-    vector<double> distance;
-    for(i=int(-n/2); i<int(n/2); i++){
-        distance.push_back(i*step);
+    vector<double> x;
+    vector<double> y;
+    for(i=int(-dim/2); i<int(dim/2); i++){
+        for(j=int(-dim/2); j<int(dim/2); j++){
+            x.push_back(i*step);
+            y.push_back(j*step);
+        }
     }
 
-    sprintf(vectorfile, "./TM%d_new.txt", 0);
-    print_to_file(vectorfile, distance, efield, n);
-
+    sprintf(vectorfile, "./TM%d.txt", 0);
+    print_to_file_3d(vectorfile, x, y, efield, n);
+*/
     return 0;
 }
 
-void print_to_file(const char* filename, vector<double> &var1, vector<double> &var2, int size){
+void print_to_file_3d(const char* filename, vector<double> &x, vector<double> &y, vector<double> &z, int size){
     /* 
      * Prints data stored in var1 and var2 in two column format in the 
      * file called 'filename', where the length of the arrays var1/2 must
@@ -87,16 +93,8 @@ void print_to_file(const char* filename, vector<double> &var1, vector<double> &v
      * */
     ofstream myfile(filename);
     int i = 0;
-    if(var2.empty()){
-        int total = var1.size();
-        for(i=total-1; i>=total - size; i--){
-            myfile << var1[i] << endl;
-        }
-    }
-    else{
-        for(i=0; i<size; i++){
-            myfile << var1[i] << "\t" << var2[i] << endl;
-        }
+    for(i=0; i<size; i++){
+        myfile << x[i] << "\t" << y[i] << "\t" << z[i] << endl;
     }
     myfile.close();
 
@@ -118,11 +116,11 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
     for(i=0; i<dim; i++){
         for(j = 0; j<dim; j++){
             if( i<left || j<left){
-                eps[i*dim + j] = n_out;
+                eps[i*dim + j] = n_out*n_out;
             }else if(i>right || j>right){
-                eps[i*dim + j] = n_out;
+                eps[i*dim + j] = n_out*n_out;
             }else{
-                eps[i*dim + j] = n_in;
+                eps[i*dim + j] = n_in*n_in;
             }            
         }
     }
@@ -157,17 +155,18 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
         if(i == 0){
             a3[i] = 1/(dy*dy);
             a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] +  k*k*eps[i%n];
+            cout << "a5[0] = " << a5[0] << endl;
         }
         else if(i ==n*n-1){
             a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
             a4[i] = 1/(dy*dy);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k*k*eps[i%n];
         }
         else{
             a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
             a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k * eps[i%n];
+            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k*k*eps[i%n];
         }
     }
 
@@ -178,6 +177,7 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
             a[0] = a5[i];
             a[1] = a4[i*n + 1];
             a[dim] = a2;
+            cout << "a[0][0] = " << a[0] << endl;
         }
         else if(i == n -1){
             a[i*n + i] = a5[i*n + i];
