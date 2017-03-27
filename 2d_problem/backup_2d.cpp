@@ -21,7 +21,7 @@ void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 40, i = 0, j=0;
+    int dim = 3, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
     double step = 1e-7;
@@ -46,14 +46,14 @@ int main(){
 
 
     
-    double ratio = 1/3.0;
+    double ratio = 1/25.0;
     double n_out = 1.4, n_in = 1.5;
 
     cout << "Constructing FD Matrix" << endl;    
     square_guide_setup(eps, dim, ratio, n_out, n_in);
     fd_matrix(a, eps, dim, step, step, k);
 
-/*    
+    
     for(i=0; i<dim*dim; i++){
         if(i%dim == 0){cout << endl;}       
         cout << eps[i] << "\t";
@@ -66,9 +66,8 @@ int main(){
         cout << a[i] << "\t";
     }
     cout << endl;
-*/
+
     
-    cout << "Solving System" << endl;
     const clock_t begin_time = clock();
     
     /* SOLVING SYSTEM */
@@ -105,10 +104,6 @@ int main(){
 
     sprintf(vectorfile, "./test%d.txt", 0);
     print_to_file_3d(vectorfile, x, y, efield, n);
-    ofstream myfile("./evalues.txt");
-    for(i=0; i<n; i++){
-        myfile << wr[i] << "\t" << wi[i] << endl;
-    }
     
     return 0;
 }
@@ -203,30 +198,30 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
     for(i=0; i < n; i++){
         if( i == 0){
             a[i + i] = a5[i + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//a1
+            a[i*n + i+1] = a4[i*n + i+1];
+            a[i*n + i + dim] = a2;
         }
         else if(i == n -1){
             a[i*n + i] = a5[i*n + i];
-            a[i*n + i-1] = a1;//3[i*n + i -1];
-            a[i*n + i - dim] = a1;//3[i*n + i - dim];
-            cout << "a[77] = " << a1;//3[i*n + i - dim] << endl;
+            a[i*n + i-1] = a3[i*n + i -1];
+            a[i*n + i - dim] = a3[i*n + i - dim];
+            cout << "a[77] = " << a3[i*n + i - dim] << endl;
         }else if(i < dim){
-            a[i*n + i -1] = a1;//3[i*n + i -1];
+            a[i*n + i -1] = a3[i*n + i -1];
             a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//2;            
+            a[i*n + i+1] = a4[i*n + i+1];
+            a[i*n + i + dim] = a2;            
         }else if(i >= n - dim){
-            a[i*n + i - dim] = a3[i*n + i -dim];//1;
-            a[i*n + i -1] = a1;//3[i*n + i -1];
+            a[i*n + i - dim] = a1;
+            a[i*n + i -1] = a3[i*n + i -1];
             a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
+            a[i*n + i+1] = a4[i*n + i+1];
         }else{
-            a[i*n + i - dim] = a3[i*n + i - dim];//1;
-            a[i*n + i -1] = a1;//3[i*n + i -1];
+            a[i*n + i - dim] = a1;
+            a[i*n + i -1] = a3[i*n + i -1];
             a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//2; 
+            a[i*n + i+1] = a4[i*n + i+1];
+            a[i*n + i + dim] = a2; 
         }
     }
 }  
