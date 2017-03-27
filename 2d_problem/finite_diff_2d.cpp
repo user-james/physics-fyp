@@ -19,7 +19,7 @@ void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 40, i = 0, j=0;
+    int dim = 100, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
     double step = 1e-7;
@@ -72,7 +72,7 @@ int main(){
         distance.push_back(i*step);
     }
 
-    sprintf(vectorfile, "./TM%d.txt", 0);
+    sprintf(vectorfile, "./TM%d_new.txt", 0);
     print_to_file(vectorfile, distance, efield, n);
 
     return 0;
