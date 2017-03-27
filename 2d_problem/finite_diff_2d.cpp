@@ -24,9 +24,9 @@ int main(){
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double step = 1e-7;
+    double step = 3e-4;
     vector<double> eps(n, 0);
-    char vectorfile[30];
+    char vectorfile[50];
 
     /* LAPACK PARAMETERS */
     char jobvl = 'N';
@@ -46,8 +46,8 @@ int main(){
 
 
     
-    double ratio = 1/3.0;
-    double n_out = 1.4, n_in = 1.5;
+    double ratio = 1/9.0;
+    double n_out = 3.16, n_in = 3.5;
 
     cout << "Constructing FD Matrix" << endl;    
     square_guide_setup(eps, dim, ratio, n_out, n_in);
@@ -86,14 +86,7 @@ int main(){
 
 
 
-    
-    cout << "Printing first Eigenvector to file" << endl;
-    vector<double> efield;
-    for(i=0; i<n; i++){
-        efield.push_back(vr[i]);
-    }
-
-
+    /* CREATING POINTS ON X-Y AXIS */ 
     vector<double> x;
     vector<double> y;
     for(i=int(-dim/2); i<int(dim/2); i++){
@@ -103,12 +96,40 @@ int main(){
         }
     }
 
-    sprintf(vectorfile, "./test%d.txt", 0);
-    print_to_file_3d(vectorfile, x, y, efield, n);
+    cout << "Printing Eigenvectors to file" << endl;
+    vector<double> efield;
+    vector<int> vector_indices;
+    for(i=0; i<n; i++){
+        if(wr[i] <= k*k*3.5*3.5 && wr[i] > wr[0]){
+           vector_indices.push_back(i);
+        } 
+    }
+
+    while(vector_indices.empty() == false){
+        j = vector_indices.back();
+        for(i=j*n; i<(j+1)*n; i++){
+            efield.push_back(vr[i]);
+        }
+        sprintf(vectorfile, "./finemesh/evectors%d.txt", j);
+        print_to_file_3d(vectorfile, x, y, efield, n);
+        vector_indices.pop_back();
+        efield.clear();
+    }
+
+    for(j=0; j<25; j++){
+        for(i=j*n; i<(j+1)*n; i++){
+            efield.push_back(vr[i]);
+        }
+        sprintf(vectorfile, "./finemesh/evectors%d.txt", j);
+        print_to_file_3d(vectorfile, x, y, efield, n);
+        efield.clear();
+    }
+
     ofstream myfile("./evalues.txt");
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
     }
+    myfile.close();
     
     return 0;
 }
@@ -210,7 +231,6 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
             a[i*n + i] = a5[i*n + i];
             a[i*n + i-1] = a1;//3[i*n + i -1];
             a[i*n + i - dim] = a1;//3[i*n + i - dim];
-            cout << "a[77] = " << a1;//3[i*n + i - dim] << endl;
         }else if(i < dim){
             a[i*n + i -1] = a1;//3[i*n + i -1];
             a[i*n + i] = a5[i*n + i];
