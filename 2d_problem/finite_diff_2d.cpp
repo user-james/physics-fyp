@@ -21,10 +21,10 @@ void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 40, i = 0, j=0;
+    int dim = 120, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double step = 3e-4;
+    double step = 4e-6/3;
     vector<double> eps(n, 0);
     char vectorfile[50];
 
@@ -35,7 +35,7 @@ int main(){
     int lda = n;
     int ldvl = 1;
     int ldvr = n;
-    int lwork = 54400;          // chosen optimally after test runs
+    int lwork = 34*n;          // chosen optimally after test runs
     int info;
     vector<double> wr(n);
     vector<double> wi(n);
@@ -105,6 +105,7 @@ int main(){
         } 
     }
 
+    /*
     while(vector_indices.empty() == false){
         j = vector_indices.back();
         for(i=j*n; i<(j+1)*n; i++){
@@ -114,9 +115,10 @@ int main(){
         print_to_file_3d(vectorfile, x, y, efield, n);
         vector_indices.pop_back();
         efield.clear();
-    }
+    }*/
 
-    for(j=0; j<25; j++){
+    /* SAVES FIRST 30 POSSIBLE EVECTORS */
+    for(j=0; j<30; j++){
         for(i=j*n; i<(j+1)*n; i++){
             efield.push_back(vr[i]);
         }
@@ -125,6 +127,7 @@ int main(){
         efield.clear();
     }
 
+    /* SAVES EIGENVALUES */
     ofstream myfile("./evalues.txt");
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
