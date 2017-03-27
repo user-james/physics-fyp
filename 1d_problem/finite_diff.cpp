@@ -29,7 +29,7 @@ int main(){
     int N = 1600, info;
 
     // systems parameters
-    double a = 2e10-6;
+    double a = 2e-6;
     double k = pi/1.55e-6;
     double n1_sq = pow(3.0, 2), n2_sq = pow(3.1, 2);
     double step = 1e-7;
