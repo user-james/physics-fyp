@@ -21,10 +21,10 @@ void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 120, i = 0, j=0;
+    int dim = 100, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double step = 4e-6/3;
+    double step = 8e-6/5;
     vector<double> eps(n, 0);
     char vectorfile[50];
 
@@ -35,7 +35,7 @@ int main(){
     int lda = n;
     int ldvl = 1;
     int ldvr = n;
-    int lwork = 34*n;          // chosen optimally after test runs
+    int lwork = 6*n;          // chosen optimally after test runs
     int info;
     vector<double> wr(n);
     vector<double> wi(n);
