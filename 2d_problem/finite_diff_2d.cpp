@@ -21,10 +21,10 @@ void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
 int main(){
     
     /* PROGRAM PARAMETERS */ 
-    int dim = 100, i = 0, j=0;
+    int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double step = 8e-6/5;
+    double step = 4e-6;
     vector<double> eps(n, 0);
     char vectorfile[50];
 
@@ -35,7 +35,7 @@ int main(){
     int lda = n;
     int ldvl = 1;
     int ldvr = n;
-    int lwork = 6*n;          // chosen optimally after test runs
+    int lwork = 34*n;          // chosen optimally after test runs
     int info;
     vector<double> wr(n);
     vector<double> wi(n);
@@ -122,13 +122,13 @@ int main(){
         for(i=j*n; i<(j+1)*n; i++){
             efield.push_back(vr[i]);
         }
-        sprintf(vectorfile, "./finemesh/evectors%d.txt", j);
+        sprintf(vectorfile, "./coarse_mesh/evectors%d.txt", j);
         print_to_file_3d(vectorfile, x, y, efield, n);
         efield.clear();
     }
 
     /* SAVES EIGENVALUES */
-    ofstream myfile("./evalues.txt");
+    ofstream myfile("./coarse_mesh/evalues.txt");
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
     }
@@ -194,62 +194,101 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
  * OUT:
  *      a -> vector now filled with elements of FD matrix to be passed into the lapack routine
  *           stored as a vector in order to be compatible with the LAPACK routine
+ *_______________________________________________________________________________________________________
+ * NOTE:
+ * a is a vector of length n*n that represents a n*n matrix
+ * to convert between the two storage methods we use the the node number r = i*n + j for point (i, j)
+ *
+ * This ratio means that the returned vector will have the form --> E = (E00, E01, E02, ..., E0n, E10, E12, ..., ..., Enn)
+ * where the first and second indeices represent x and y respectively
  */
     int n = dim * dim;
     int i = 0, j=0;
-    double a1 = 1/(dx*dx);
-    double a2 = 1/(dx*dx);
-    vector<double> a3(n*n, 0);
-    vector<double> a4(n*n, 0);
-    vector<double> a5(n*n, 0);
+    
+    vector<double> a_up(n, 1/(dy*dy));
+    vector<double> a_down(n, 1/(dy*dy));
+    vector<double> a_left(n, 0);
+    vector<double> a_right(n, 0);
+    vector<double> a_mid(n, 0);
 
     /* INITIALIZING MULTIPLIERS */
-    for(i=0; i<n*n; i++){
+    for(i=0; i<n; i++){
         if(i == 0){
-            a3[i] = 1/(dy*dy);
-            a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] +  k*k*eps[i%n];
+            a_left[i] = 1/(dx*dx);
+            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] +  k*k*eps[i];
         }
-        else if(i ==n*n-1){
-            a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
-            a4[i] = 1/(dy*dy);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k*k*eps[i%n];
+        else if(i ==n-1){
+            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+            a_right[i] = 1/(dx*dx);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
         }
         else{
-            a3[i] = 1/(dy*dy) * 2 * eps[(i-1)%n]/(eps[i%n] + eps[(i-1)%n]);
-            a4[i] = 1/(dy*dy) * 2 * eps[(i+1)%n]/(eps[i%n] + eps[(i+1)%n]);
-            a5[i] = -2*a1 - 4/(dy*dy) + a3[i] + a4[i] + k*k*eps[i%n];
+            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
         }
     }
 
     
-    /* CONTRUCTING MATRIX */
+    /*                          CONTRUCTING MATRIX 
+     * 
+     * Here we use the modulus operator because the system matrix has dim*dim = n elements
+     * but the Finite Difference matrix has n*n elements
+     */
     for(i=0; i < n; i++){
         if( i == 0){
-            a[i + i] = a5[i + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//a1
+            a[i + i] = a_mid[(i + i)%n];
+            a[i*n + i+1] = a_up[(i*n + i+1)%n];
+            a[i*n + i + dim] = a_right[(i*n + i + dim)%n];
         }
         else if(i == n -1){
-            a[i*n + i] = a5[i*n + i];
-            a[i*n + i-1] = a1;//3[i*n + i -1];
-            a[i*n + i - dim] = a1;//3[i*n + i - dim];
+            a[i*n + i] = a_mid[(i*n + i)%n];
+            a[i*n + i-1] = a_down[(i*n + i-1)%n];
+            a[i*n + i - dim] = a_left[(i*n + i -dim)%n];
         }else if(i < dim){
-            a[i*n + i -1] = a1;//3[i*n + i -1];
-            a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//2;            
+            a[i*n + i -1] = a_down[(i*n + i-1)%n];
+            a[i*n + i] = a_mid[(i*n + i)%n];
+            a[i*n + i+1] = a_up[(i*n + i+1)%n];
+            a[i*n + i + dim] = a_right[(i*n + i + dim)%n];           
         }else if(i >= n - dim){
-            a[i*n + i - dim] = a3[i*n + i -dim];//1;
-            a[i*n + i -1] = a1;//3[i*n + i -1];
-            a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
+            a[i*n + i - dim] = a_left[(i*n + i -dim)%n];
+            a[i*n + i -1] = a_down[(i*n + i -1)%n];
+            a[i*n + i] = a_mid[(i*n + i)%n];
+            a[i*n + i+1] = a_up[(i*n + i+1)%n];        
         }else{
-            a[i*n + i - dim] = a3[i*n + i - dim];//1;
-            a[i*n + i -1] = a1;//3[i*n + i -1];
-            a[i*n + i] = a5[i*n + i];
-            a[i*n + i+1] = a2;//4[i*n + i+1];
-            a[i*n + i + dim] = a4[i*n + i + dim];//2; 
+            a[i*n + i - dim] = a_left[(i*n + i - dim)%n];
+            a[i*n + i -1] = a_down[(i*n + i -1)%n];
+            a[i*n + i] = a_mid[(i*n + i)%n];
+            a[i*n + i+1] = a_up[(i*n + i+1)%n];
+            a[i*n + i + dim] = a_right[(i*n + i + dim)%n]; 
         }
     }
-}  
+}
+
+
+
+void multipliers(char mode, char field, vector<double> &a_left, vector<double> &a_right, vector<double> &a_up, vector<double> &a_down, vector<double> &a_mid, double dx, double dy, double k, vector<double> &eps){
+    
+    
+    int n;
+    int i;
+    n = eps.size();
+    for(i=0; i<n; i++){
+        if(i == 0){
+            a_left[i] = 1/(dx*dx);
+            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] +  k*k*eps[i];
+        }
+        else if(i ==n-1){
+            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+            a_right[i] = 1/(dx*dx);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
+        }
+        else{
+            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
+        }
+    }
+}
