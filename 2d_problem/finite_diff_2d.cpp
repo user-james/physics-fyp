@@ -16,17 +16,20 @@ extern "C" void dgeev_(char* JOBVL, char* JOBVR, int* N, double* A, int* LDA, do
 
 void print_to_file_3d(const char*, vector<double> &, vector<double> &, vector<double> &, int);
 void square_guide_setup(vector<double> &, int, double, double, double);
-void fd_matrix(vector<double> &, vector<double> &, int, double, double, double);
+void fd_matrix(vector<double> &, vector<double> &, int, double, double, double, char, char);
+void multipliers(char , char , vector<double> &, vector<double> &, vector<double> &, vector<double> &, vector<double> &, double , double , double , vector<double> &);
 
 int main(){
     
-    /* PROGRAM PARAMETERS */ 
+    /* PROGRAM PARAMETERS */
+    char mode = 'M', field = 'E';
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
     double step = 4e-6;
     vector<double> eps(n, 0);
-    char vectorfile[50];
+    char evectorfile[50];
+    char evaluefile[50];
 
     /* LAPACK PARAMETERS */
     char jobvl = 'N';
@@ -51,7 +54,7 @@ int main(){
 
     cout << "Constructing FD Matrix" << endl;    
     square_guide_setup(eps, dim, ratio, n_out, n_in);
-    fd_matrix(a, eps, dim, step, step, k);
+    fd_matrix(a, eps, dim, step, step, k, mode, field);
 
 /*    
     for(i=0; i<dim*dim; i++){
@@ -122,13 +125,14 @@ int main(){
         for(i=j*n; i<(j+1)*n; i++){
             efield.push_back(vr[i]);
         }
-        sprintf(vectorfile, "./coarse_mesh/evectors%d.txt", j);
-        print_to_file_3d(vectorfile, x, y, efield, n);
+        sprintf(evectorfile, "./coarse_mesh/T%c/%c%d.txt", mode, field, j);
+        print_to_file_3d(evectorfile, x, y, efield, n);
         efield.clear();
     }
 
     /* SAVES EIGENVALUES */
-    ofstream myfile("./coarse_mesh/evalues.txt");
+    sprintf(evaluefile, "./coarse_mesh/T%c/evalues.txt", mode);
+    ofstream myfile(evaluefile);
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
     }
@@ -181,7 +185,7 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
 }
 
 
-void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, double dy, double k){
+void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, double dy, double k, char mode, char field){
 /*
  * IN:
  *      a -> vector of dimension dim^4 filled with just zeros (represents FD matrix)
@@ -190,11 +194,13 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
  *      dx -> step in x direction
  *      dy -> step in y direction
  *      k -> wave vector
+ *      mode (E/M) -> represents whether TE or TM mode is wanted
+ *      field (E/H) -> represents whether you are interested in the E field or the H field
  *
  * OUT:
  *      a -> vector now filled with elements of FD matrix to be passed into the lapack routine
  *           stored as a vector in order to be compatible with the LAPACK routine
- *_______________________________________________________________________________________________________
+ * ______________________________________________________________________________________________________
  * NOTE:
  * a is a vector of length n*n that represents a n*n matrix
  * to convert between the two storage methods we use the the node number r = i*n + j for point (i, j)
@@ -204,31 +210,14 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
  */
     int n = dim * dim;
     int i = 0, j=0;
-    
-    vector<double> a_up(n, 1/(dy*dy));
-    vector<double> a_down(n, 1/(dy*dy));
+    vector<double> a_up(n, 0);
+    vector<double> a_down(n, 0);
     vector<double> a_left(n, 0);
     vector<double> a_right(n, 0);
     vector<double> a_mid(n, 0);
 
     /* INITIALIZING MULTIPLIERS */
-    for(i=0; i<n; i++){
-        if(i == 0){
-            a_left[i] = 1/(dx*dx);
-            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] +  k*k*eps[i];
-        }
-        else if(i ==n-1){
-            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
-            a_right[i] = 1/(dx*dx);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
-        }
-        else{
-            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
-            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
-        }
-    }
+    multipliers(mode, field, a_left, a_right, a_up, a_down, a_mid, dx, dy, k, eps);
 
     
     /*                          CONTRUCTING MATRIX 
@@ -271,24 +260,46 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
 void multipliers(char mode, char field, vector<double> &a_left, vector<double> &a_right, vector<double> &a_up, vector<double> &a_down, vector<double> &a_mid, double dx, double dy, double k, vector<double> &eps){
     
     
-    int n;
+    int n, dim;
     int i;
     n = eps.size();
-    for(i=0; i<n; i++){
-        if(i == 0){
-            a_left[i] = 1/(dx*dx);
-            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] +  k*k*eps[i];
+    dim = sqrt(n);
+    if(mode == 'E' && field == 'E'){
+        for(i=0; i<n; i++){
+            a_up[i] = 1/(dy*dy);
+            a_down[i] = 1/(dy*dy);
+            if(i == 0){
+                a_left[i] = 1/(dx*dx);
+                a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            }
+            else if(i ==n-1){
+                a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+                a_right[i] = 1/(dx*dx);
+            }
+            else{
+                a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+                a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
+            }
+            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
         }
-        else if(i ==n-1){
-            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
+    }
+    else if(mode == 'M' && field == 'E'){    
+        for(i=0; i<n; i++){
             a_right[i] = 1/(dx*dx);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
-        }
-        else{
-            a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
-            a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
-            a_mid[i] = -2*a_up[i] - 4/(dx*dx) + a_left[i] + a_right[i] + k*k*eps[i];
+            a_left[i] = 1/(dx*dx);
+            if(i < dim){
+                a_up[i] = 1/(dy*dy);
+                a_down[i] = 1/(dy*dy) * 2 * eps[i+dim]/(eps[i] + eps[i+dim]);
+            }
+            else if(i >= n-dim){
+                a_up[i]  = 1/(dy*dy) * 2 * eps[i-dim]/(eps[i] + eps[i-dim]);
+                a_down[i] = 1/(dy*dy);
+            }
+            else{
+                a_up[i]  = 1/(dy*dy) * 2 * eps[i-dim]/(eps[i] + eps[i-dim]);
+                a_down[i] = 1/(dy*dy) * 2 * eps[i+dim]/(eps[i] + eps[i+dim]);
+            }
+            a_mid[i] = -a_left[i] - a_right[i] - 4/(dy*dy) + a_up[i] + a_down[i] +  k*k*eps[i];
         }
     }
 }
