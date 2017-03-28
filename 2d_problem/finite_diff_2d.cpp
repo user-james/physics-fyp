@@ -22,7 +22,7 @@ void multipliers(char , char , vector<double> &, vector<double> &, vector<double
 int main(){
     
     /* PROGRAM PARAMETERS */
-    char mode = 'M', field = 'E';
+    char mode = 'M', field = 'H';
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
@@ -39,7 +39,7 @@ int main(){
     int ldvl = 1;
     int ldvr = n;
     int lwork = 34*n;          // chosen optimally after test runs
-    int info;
+    int info = 1;
     vector<double> wr(n);
     vector<double> wi(n);
     vector<double> a(lda*n, 0);
@@ -85,6 +85,7 @@ int main(){
     }else{
         cout << "LAPACK Failed\nFORTRAN routine exited with INFO = "<< info << endl;
         cout << "Time Taken: " << float(clock() - begin_time) / CLOCKS_PER_SEC << endl;
+        return 1;
     }    
 
 
@@ -186,7 +187,9 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
 
 
 void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, double dy, double k, char mode, char field){
-/*
+/* 
+ * CONSTRUCTS FINITE DIFFERENCE MATRIX
+ *
  * IN:
  *      a -> vector of dimension dim^4 filled with just zeros (represents FD matrix)
  *      eps -> matrix containing epsilon_r at each coordinate (x, y)
@@ -206,7 +209,7 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
  * to convert between the two storage methods we use the the node number r = i*n + j for point (i, j)
  *
  * This ratio means that the returned vector will have the form --> E = (E00, E01, E02, ..., E0n, E10, E12, ..., ..., Enn)
- * where the first and second indeices represent x and y respectively
+ * where the first and second indices represent x and y respectively
  */
     int n = dim * dim;
     int i = 0, j=0;
@@ -257,8 +260,30 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
 
 
 
-void multipliers(char mode, char field, vector<double> &a_left, vector<double> &a_right, vector<double> &a_up, vector<double> &a_down, vector<double> &a_mid, double dx, double dy, double k, vector<double> &eps){
+void multipliers(char mode_, char field_, vector<double> &a_left, vector<double> &a_right, vector<double> &a_up, vector<double> &a_down, vector<double> &a_mid, double dx, double dy, double k, vector<double> &eps){
+/*
+ * CALCULATES MULTIPLIERS FOR USE IN FD MATRIX
+ *
+ * IN:
+ *      mode_ (E/M) -> mode you are interested in TM/TE
+ *      field_ (E/H) -> field you are interested in 
+ *      a_X -> vectors used to store multipliers
+ *      dx -> step in x direction
+ *      dy -> step in y direction
+ *      k -> wave vector
+ *      eps -> vector holding relative perimitvities at each point
+ *
+ * MODIFIED:
+ *      a_X -> now contains multipliers to be used when constructing the FD mtrix
+ */ 
     
+    /* INITIAL CHECK TO ENSURE MULTIPLIERS HAVE A DEFAULT VALUE */
+    char mode = mode_;
+    char field = field_;
+    if(mode != 'E' && mode != 'M'){cout << "MODE WRONG" <<endl; mode = 'E';}
+    if(field != 'E' && field != 'H'){cout << "FIELD WRONG" <<endl; field = 'E';}
+    cout << "Mode = " << mode << endl;
+    cout << "Field = " << field << endl; 
     
     int n, dim;
     int i;
@@ -300,6 +325,42 @@ void multipliers(char mode, char field, vector<double> &a_left, vector<double> &
                 a_down[i] = 1/(dy*dy) * 2 * eps[i+dim]/(eps[i] + eps[i+dim]);
             }
             a_mid[i] = -a_left[i] - a_right[i] - 4/(dy*dy) + a_up[i] + a_down[i] +  k*k*eps[i];
+        }
+    }else if(mode == 'E' && field == 'H'){
+        for(i=0; i<n; i++){
+            a_up[i] = 1/(dy*dy);
+            a_down[i] = 1/(dy*dy);
+            if(i == 0){
+                a_left[i] = 1/(dx*dx);
+                a_right[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i+1]);
+            }
+            else if(i ==n-1){
+                a_left[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i-1]);
+                a_right[i] = 1/(dx*dx);
+            }
+            else{
+                a_left[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i-1]);
+                a_right[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i+1]);
+            }
+            a_mid[i] =  - a_left[i] - a_right[i] - a_up[i] - a_down[i] + k*k*eps[i];
+        }
+    }else{
+        for(i=0; i<n; i++){
+            a_right[i] = 1/(dx*dx);
+            a_left[i] = 1/(dx*dx);
+            if(i < dim){
+                a_up[i] = 1/(dy*dy);
+                a_down[i] = 1/(dy*dy) * 2 * eps[i]/(eps[i] + eps[i+dim]);
+            }
+            else if(i >= n-dim){
+                a_up[i]  = 1/(dy*dy) * 2 * eps[i]/(eps[i] + eps[i-dim]);
+                a_down[i] = 1/(dy*dy);
+            }
+            else{
+                a_up[i]  = 1/(dy*dy) * 2 * eps[i]/(eps[i] + eps[i-dim]);
+                a_down[i] = 1/(dy*dy) * 2 * eps[i]/(eps[i] + eps[i+dim]);
+            }
+            a_mid[i] = -a_left[i] - a_right[i] - a_up[i] - a_down[i] +  k*k*eps[i];
         }
     }
 }
