@@ -28,11 +28,13 @@ int main(){
     int n = dim*dim;
     double k = pi/1.55e-6;
     double width = 1.6e-4;
-    double step = width/40;;
+    double step = width/dim;;
     vector<double> eps(n, 0);
     vector<double> test(n, 0);
     char evectorfile[50];
     char evaluefile[50];
+    char guide_dir[20];
+    char guidetype;
 
     /* LAPACK PARAMETERS */
     char jobvl = 'N';
@@ -41,7 +43,7 @@ int main(){
     int lda = n;
     int ldvl = 1;
     int ldvr = n;
-    int lwork = 10*n;          // chosen optimally after test runs
+    int lwork = 34*n;          // chosen optimally after test runs
     int info = 1;
     vector<double> wr(n);
     vector<double> wi(n);
@@ -50,22 +52,35 @@ int main(){
     vector<double> vr(ldvr*n, 0);
     vector<double> work(lwork, 0);
 
-
-    
+    /* WAVEGUIDE PROPERTIES */
     double ratio = 1/9.0;
     double n_out = 3.16, n_in = 3.5;
 
+    cout << "Construct strip waveguide or core waveguide (s/c)? ";
+    cin >> guidetype;
+    if(guidetype != 's' && guidetype != 'c'){
+        cout << "Invalid waveguide option. Defaulted to strip waveguide" << endl;
+        guidetype = 's';
+    }
+
     cout << "Constructing FD Matrix" << endl;    
-    square_guide_setup(eps, dim, ratio, n_out, n_in);
-    strip_loaded_waveguide(test, 8, .5, 1, .25, .25, 1, n_out, n_in);
+    if(guidetype == 'c'){
+        square_guide_setup(eps, dim, ratio, n_out, n_in);
+    }else if(guidetype == 's'){
+        strip_loaded_waveguide(eps, dim, width, 2.5e-5, width, 1.5e-5 , 0.5e-5, n_out, n_in);
+        cout << "Strip loaded :D" << endl;
+    }else{
+        cout << "Something went wrong with the waveguide" << endl;
+        return 1;
+    }
     fd_matrix(a, eps, dim, step, step, k, mode, field);
 
+/*    
     for(i=0; i<8*8; i++){
         if(i%8 == 0){cout << endl;}       
         cout << test[i] << "\t";
     }
 
-/*    
     cout << "\n\n\n\n\n";
     cout << setprecision(3);
     for(i=0; i<n*n; i++){
@@ -79,7 +94,7 @@ int main(){
     const clock_t begin_time = clock();
     
     /* SOLVING SYSTEM */
-    //dgeev_(&jobvl, &jobvr, &n, &a[0], &lda, &wr[0], &wi[0], &vl[0], &ldvl, &vr[0], &ldvr, &work[0], &lwork, &info);
+    dgeev_(&jobvl, &jobvr, &n, &a[0], &lda, &wr[0], &wi[0], &vl[0], &ldvl, &vr[0], &ldvr, &work[0], &lwork, &info);
 
     if(info == 0){
         cout << "\nSolution Found" << endl;
@@ -122,18 +137,25 @@ int main(){
         efield.clear();
     }*/
 
+
+    if(guidetype == 's'){
+        sprintf(guide_dir, "strip");
+    }else{
+        sprintf(guide_dir, "core");
+    }
+
     /* SAVES FIRST 30 POSSIBLE EVECTORS */
     for(j=0; j<30; j++){
         for(i=j*n; i<(j+1)*n; i++){
             efield.push_back(vr[i]);
         }
-        sprintf(evectorfile, "./coarse_mesh/T%c/%c%d.txt", mode, field, j);
+        sprintf(evectorfile, "./coarse_mesh/%s/T%c/%c%d.txt", guide_dir, mode, field, j);
         print_to_file_3d(evectorfile, x, y, efield, n);
         efield.clear();
     }
 
     /* SAVES EIGENVALUES */
-    sprintf(evaluefile, "./coarse_mesh/T%c/evalues.txt", mode);
+    sprintf(evaluefile, "./coarse_mesh/%s/T%c/evalues.txt", guide_dir, mode);
     ofstream myfile(evaluefile);
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
@@ -186,7 +208,7 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
  
 }
 
-void strip_loaded_waveguide(vector<double> &eps, int dim, double strip_w, double total_w, double strip_h, double strip_base_h, double total_h, double n_out, double n_in){
+void strip_loaded_waveguide(vector<double> &eps, int dim, double total_w, double strip_w, double total_h, double strip_h, double strip_base_h, double n_out, double n_in){
     
     int left = dim*(total_w - strip_w)/(2*total_w);
     int right = dim*(total_w + strip_w)/(2*total_w);
