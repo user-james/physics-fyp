@@ -16,18 +16,21 @@ extern "C" void dgeev_(char* JOBVL, char* JOBVR, int* N, double* A, int* LDA, do
 
 void print_to_file_3d(const char*, vector<double> &, vector<double> &, vector<double> &, int);
 void square_guide_setup(vector<double> &, int, double, double, double);
+void strip_loaded_waveguide(vector<double> &, int, double, double, double, double, double, double, double);
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double, char, char);
 void multipliers(char , char , vector<double> &, vector<double> &, vector<double> &, vector<double> &, vector<double> &, double , double , double , vector<double> &);
 
 int main(){
     
     /* PROGRAM PARAMETERS */
-    char mode = 'M', field = 'H';
+    char mode = 'E', field = 'E';
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double step = 4e-6;
+    double width = 1.6e-4;
+    double step = width/40;;
     vector<double> eps(n, 0);
+    vector<double> test(n, 0);
     char evectorfile[50];
     char evaluefile[50];
 
@@ -38,7 +41,7 @@ int main(){
     int lda = n;
     int ldvl = 1;
     int ldvr = n;
-    int lwork = 34*n;          // chosen optimally after test runs
+    int lwork = 10*n;          // chosen optimally after test runs
     int info = 1;
     vector<double> wr(n);
     vector<double> wi(n);
@@ -54,14 +57,15 @@ int main(){
 
     cout << "Constructing FD Matrix" << endl;    
     square_guide_setup(eps, dim, ratio, n_out, n_in);
+    strip_loaded_waveguide(test, 8, .5, 1, .25, .25, 1, n_out, n_in);
     fd_matrix(a, eps, dim, step, step, k, mode, field);
 
-/*    
-    for(i=0; i<dim*dim; i++){
-        if(i%dim == 0){cout << endl;}       
-        cout << eps[i] << "\t";
+    for(i=0; i<8*8; i++){
+        if(i%8 == 0){cout << endl;}       
+        cout << test[i] << "\t";
     }
 
+/*    
     cout << "\n\n\n\n\n";
     cout << setprecision(3);
     for(i=0; i<n*n; i++){
@@ -75,9 +79,8 @@ int main(){
     const clock_t begin_time = clock();
     
     /* SOLVING SYSTEM */
-    dgeev_(&jobvl, &jobvr, &n, &a[0], &lda, &wr[0], &wi[0], &vl[0], &ldvl, &vr[0], &ldvr, &work[0], &lwork, &info);
+    //dgeev_(&jobvl, &jobvr, &n, &a[0], &lda, &wr[0], &wi[0], &vl[0], &ldvl, &vr[0], &ldvr, &work[0], &lwork, &info);
 
-    //dsyev_(&job, &uplo, &n, &a[0], &lda, &w[0], &work[0], &lwork, &info);
     if(info == 0){
         cout << "\nSolution Found" << endl;
         cout << "Time Taken: " << float(clock() - begin_time) / CLOCKS_PER_SEC << endl;
@@ -87,8 +90,6 @@ int main(){
         cout << "Time Taken: " << float(clock() - begin_time) / CLOCKS_PER_SEC << endl;
         return 1;
     }    
-
-
 
     /* CREATING POINTS ON X-Y AXIS */ 
     vector<double> x;
@@ -183,6 +184,30 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
         }
     }
  
+}
+
+void strip_loaded_waveguide(vector<double> &eps, int dim, double strip_w, double total_w, double strip_h, double strip_base_h, double total_h, double n_out, double n_in){
+    
+    int left = dim*(total_w - strip_w)/(2*total_w);
+    int right = dim*(total_w + strip_w)/(2*total_w);
+    int top = dim*(total_h - strip_h - strip_base_h)/(2*total_h);
+    int mid = dim*(total_h + strip_h - strip_base_h)/(2*total_h);
+    int bottom = dim*(total_h + strip_h + strip_base_h)/(2*total_h);
+    int i,j ;
+    for(i=0; i< dim; i++){
+        for(j = 0; j< dim; j++){
+            if(i< top){
+                eps[i*dim + j] = 1;
+            }else if(i >= top && i < mid){
+                if(j < left || j >= right){eps[i*dim + j] = 1;}
+                else{eps[i*dim + j] = n_in;}
+            }else if(i >= mid && i < bottom){
+                eps[i*dim + j] = n_in;
+            }else{
+                eps[i*dim + j] = n_out;
+            }
+        }
+    }        
 }
 
 
@@ -280,8 +305,8 @@ void multipliers(char mode_, char field_, vector<double> &a_left, vector<double>
     /* INITIAL CHECK TO ENSURE MULTIPLIERS HAVE A DEFAULT VALUE */
     char mode = mode_;
     char field = field_;
-    if(mode != 'E' && mode != 'M'){cout << "MODE WRONG" <<endl; mode = 'E';}
-    if(field != 'E' && field != 'H'){cout << "FIELD WRONG" <<endl; field = 'E';}
+    if(mode != 'E' && mode != 'M'){cout << "---INVALID MODE---" <<endl; mode = 'E';}
+    if(field != 'E' && field != 'H'){cout << "---INVALID FIELD---" <<endl; field = 'E';}
     cout << "Mode = " << mode << endl;
     cout << "Field = " << field << endl; 
     
@@ -293,11 +318,11 @@ void multipliers(char mode_, char field_, vector<double> &a_left, vector<double>
         for(i=0; i<n; i++){
             a_up[i] = 1/(dy*dy);
             a_down[i] = 1/(dy*dy);
-            if(i == 0){
+            if(i%n == 0){
                 a_left[i] = 1/(dx*dx);
                 a_right[i] = 1/(dx*dx) * 2 * eps[i+1]/(eps[i] + eps[i+1]);
             }
-            else if(i ==n-1){
+            else if(i%n == 1){
                 a_left[i] = 1/(dx*dx) * 2 * eps[i-1]/(eps[i] + eps[i-1]);
                 a_right[i] = 1/(dx*dx);
             }
@@ -330,11 +355,11 @@ void multipliers(char mode_, char field_, vector<double> &a_left, vector<double>
         for(i=0; i<n; i++){
             a_up[i] = 1/(dy*dy);
             a_down[i] = 1/(dy*dy);
-            if(i == 0){
+            if(i%n == 0){
                 a_left[i] = 1/(dx*dx);
                 a_right[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i+1]);
             }
-            else if(i ==n-1){
+            else if(i%n == 1){
                 a_left[i] = 1/(dx*dx) * 2 * eps[i]/(eps[i] + eps[i-1]);
                 a_right[i] = 1/(dx*dx);
             }
