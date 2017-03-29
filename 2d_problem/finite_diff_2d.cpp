@@ -67,7 +67,7 @@ int main(){
     if(guidetype == 'c'){
         square_guide_setup(eps, dim, ratio, n_out, n_in);
     }else if(guidetype == 's'){
-        strip_loaded_waveguide(eps, dim, width, 2.5e-5, width, 1.5e-5 , 0.5e-5, n_out, n_in);
+        strip_loaded_waveguide(eps, dim, width, 2.5e-6, width, 1.5e-6 , 0.5e-6, n_out, n_in);
         cout << "Strip loaded :D" << endl;
     }else{
         cout << "Something went wrong with the waveguide" << endl;
