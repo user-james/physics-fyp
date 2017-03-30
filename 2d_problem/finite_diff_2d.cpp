@@ -20,21 +20,43 @@ void strip_loaded_waveguide(vector<double> &, int, double, double, double, doubl
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double, char, char);
 void multipliers(char , char , vector<double> &, vector<double> &, vector<double> &, vector<double> &, vector<double> &, double , double , double , vector<double> &);
 
-int main(){
-    
+int main(int argc, char* argv[]){
+  
+    double mult = 1.0;
+    char guidetype = 's';
+    if(argc != 3){
+        cout << "Incorrect number of arguments. Arguments not used" << endl;
+    }else{
+        if(*argv[1] != 's' && *argv[1] != 'c'){
+            cout << "Invalid waveguide option. Defaulted to strip waveguide" << endl;
+            guidetype = 's';
+        }else{guidetype = *argv[1];}
+        
+        mult = atof(argv[2]);
+        cout << mult << endl;
+        if(mult > 1.0 || mult < 0.0){
+            mult = 1.0;
+        }
+    }
+
+
     /* PROGRAM PARAMETERS */
     char mode = 'E', field = 'E';
     int dim = 40, i = 0, j=0;
     int n = dim*dim;
     double k = pi/1.55e-6;
-    double width = 1.6e-4;
-    double step = width/dim;;
+    double width = mult*1.6e-4;
+    double strip_w = mult*width/3;//2.5e-5;
+    double height = mult*1.6e-4;
+    double strip_h = mult*2*height/9;
+    double strip_base_h = mult*height/9;
+    double dx = width/dim;
+    double dy = height/dim;
     vector<double> eps(n, 0);
     vector<double> test(n, 0);
     char evectorfile[50];
     char evaluefile[50];
     char guide_dir[20];
-    char guidetype;
 
     /* LAPACK PARAMETERS */
     char jobvl = 'N';
@@ -55,7 +77,7 @@ int main(){
     /* WAVEGUIDE PROPERTIES */
     double ratio = 1/9.0;
     double n_out = 3.16, n_in = 3.5;
-
+/*
     cout << "Construct strip waveguide or core waveguide (s/c)? ";
     cin >> guidetype;
     if(guidetype != 's' && guidetype != 'c'){
@@ -63,24 +85,28 @@ int main(){
         guidetype = 's';
     }
 
-    cout << "Constructing FD Matrix" << endl;    
+*/      
+
+
+    cout << "Constructing FD Matrix ";    
     if(guidetype == 'c'){
         square_guide_setup(eps, dim, ratio, n_out, n_in);
+        cout << "using symmetric core waveguide" << endl;
     }else if(guidetype == 's'){
-        strip_loaded_waveguide(eps, dim, width, 2.5e-5, width, 1.5e-5 , 0.5e-5, n_out, n_in);
-        cout << "Strip loaded :D" << endl;
+        strip_loaded_waveguide(eps, dim, width, strip_w, height, strip_h , strip_base_h, n_out, n_in);
+        cout << "using strip loaded waveguide" << endl;
     }else{
-        cout << "Something went wrong with the waveguide" << endl;
+        cout << "\nSomething went wrong with the waveguide" << endl;
         return 1;
     }
-    fd_matrix(a, eps, dim, step, step, k, mode, field);
+    fd_matrix(a, eps, dim, dx, dy, k, mode, field);
 
-/*    
-    for(i=0; i<8*8; i++){
-        if(i%8 == 0){cout << endl;}       
-        cout << test[i] << "\t";
+    
+    for(i=0; i<dim*dim; i++){
+        if(i%dim == 0){cout << endl;}       
+        cout << eps[i] << "\t";
     }
-
+/*
     cout << "\n\n\n\n\n";
     cout << setprecision(3);
     for(i=0; i<n*n; i++){
@@ -111,8 +137,8 @@ int main(){
     vector<double> y;
     for(i=int(-dim/2); i<int(dim/2); i++){
         for(j=int(-dim/2); j<int(dim/2); j++){
-            x.push_back(i*step);
-            y.push_back(j*step);
+            y.push_back(i*dy);
+            x.push_back(j*dx);
         }
     }
 
@@ -125,19 +151,6 @@ int main(){
         } 
     }
 
-    /*
-    while(vector_indices.empty() == false){
-        j = vector_indices.back();
-        for(i=j*n; i<(j+1)*n; i++){
-            efield.push_back(vr[i]);
-        }
-        sprintf(vectorfile, "./finemesh/evectors%d.txt", j);
-        print_to_file_3d(vectorfile, x, y, efield, n);
-        vector_indices.pop_back();
-        efield.clear();
-    }*/
-
-
     if(guidetype == 's'){
         sprintf(guide_dir, "strip");
     }else{
@@ -145,17 +158,17 @@ int main(){
     }
 
     /* SAVES FIRST 30 POSSIBLE EVECTORS */
-    for(j=0; j<30; j++){
+    for(j=0; j<5; j++){
         for(i=j*n; i<(j+1)*n; i++){
             efield.push_back(vr[i]);
         }
-        sprintf(evectorfile, "./coarse_mesh/%s/T%c/%c%d.txt", guide_dir, mode, field, j);
+        sprintf(evectorfile, "./coarse_mesh/%s/T%c/%.3f%c%d.txt", guide_dir, mode, mult, field, j);
         print_to_file_3d(evectorfile, x, y, efield, n);
         efield.clear();
     }
 
     /* SAVES EIGENVALUES */
-    sprintf(evaluefile, "./coarse_mesh/%s/T%c/evalues.txt", guide_dir, mode);
+    sprintf(evaluefile, "./coarse_mesh/%s/T%c/%.3fevalues.txt", guide_dir, mode, mult);
     ofstream myfile(evaluefile);
     for(i=0; i<n; i++){
         myfile << wr[i] << "\t" << wi[i] << endl;
@@ -209,22 +222,40 @@ void square_guide_setup(vector<double> &eps , int dim, double centre_ratio, doub
 }
 
 void strip_loaded_waveguide(vector<double> &eps, int dim, double total_w, double strip_w, double total_h, double strip_h, double strip_base_h, double n_out, double n_in){
-    
-    int left = dim*(total_w - strip_w)/(2*total_w);
-    int right = dim*(total_w + strip_w)/(2*total_w);
-    int top = dim*(total_h - strip_h - strip_base_h)/(2*total_h);
-    int mid = dim*(total_h + strip_h - strip_base_h)/(2*total_h);
-    int bottom = dim*(total_h + strip_h + strip_base_h)/(2*total_h);
+/*
+ *                      CONSTRUCTS STRIP LOADED WAVEGUIDE
+ *
+ * IN:
+ *      eps -> vector of dimension n = dim*dim representing the waveguide matrix
+ *      dim -> dimension in one direction
+ *      total_w -> total width of waveguide
+ *      strip_w -> width of strip loaded onto waveguide
+ *      total_h -> total height of waveguide 
+ *      strip_h -> height of strip jutting out ouf waveguide (n = n_in)
+ *      strip_base_h -> height of the base from which the strip juts out (n = n_in)
+ *      n_out -> refractive index of bottom layer of waveguide
+ *      n_in -> refractive index of strip and it's base
+ *
+ * MODIFIED:
+ *      eps -> now loaded with matrix elements representing waveguide at each point in 2D space
+ *
+ */ 
+    int left = dim*(total_w - strip_w)/(2*total_w); cout <<  "left = " << left <<endl;
+    int right = dim*(total_w + strip_w)/(2*total_w); cout << "right = " << right << endl;
+    int top = dim*(total_h - strip_h - strip_base_h)/(2*total_h); cout << "top = " << top << endl;
+    int mid = dim*(total_h + strip_h - strip_base_h)/(2*total_h); cout << "mid = " << mid << endl;
+    int bottom = dim*(total_h + strip_h + strip_base_h)/(2*total_h); cout << "bottom = " << bottom << endl;
     int i,j ;
     for(i=0; i< dim; i++){
         for(j = 0; j< dim; j++){
             if(i< top){
                 eps[i*dim + j] = 1;
-            }else if(i >= top && i < mid){
+            }else if(i >= top && i <= mid){
                 if(j < left || j >= right){eps[i*dim + j] = 1;}
                 else{eps[i*dim + j] = n_in;}
-            }else if(i >= mid && i < bottom){
-                eps[i*dim + j] = n_in;
+            }else if(i > mid && i < bottom){
+                if(j >= dim/10 && j < 9*dim/10){eps[i*dim + j] = n_in;}
+                else{eps[i*dim + j] = 1;}
             }else{
                 eps[i*dim + j] = n_out;
             }
@@ -235,7 +266,7 @@ void strip_loaded_waveguide(vector<double> &eps, int dim, double total_w, double
 
 void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, double dy, double k, char mode, char field){
 /* 
- * CONSTRUCTS FINITE DIFFERENCE MATRIX
+ *                      CONSTRUCTS FINITE DIFFERENCE MATRIX
  *
  * IN:
  *      a -> vector of dimension dim^4 filled with just zeros (represents FD matrix)
@@ -309,7 +340,7 @@ void fd_matrix(vector<double> &a, vector<double> &eps, int dim, double dx, doubl
 
 void multipliers(char mode_, char field_, vector<double> &a_left, vector<double> &a_right, vector<double> &a_up, vector<double> &a_down, vector<double> &a_mid, double dx, double dy, double k, vector<double> &eps){
 /*
- * CALCULATES MULTIPLIERS FOR USE IN FD MATRIX
+ *                      CALCULATES MULTIPLIERS FOR USE IN FD MATRIX
  *
  * IN:
  *      mode_ (E/M) -> mode you are interested in TM/TE
