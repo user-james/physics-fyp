@@ -1,0 +1,24 @@
+_________________________________________________
+
+THIS IS A GENERAL OUTLINE OF THE FINAL REPORT
+_________________________________________________
+
+
+INTRO:
+    - History of waveguides (maybe even sound)
+    - Waveguides size and application range
+    - (Light) Method of propogation (total internal reflection)
+    - Propogation equations <-> similarities between Helmholtz and Schrodinger equations
+    - Finite difference methods intro
+
+
+METHODS:
+    - 1D case -> analytical derivation (include numerical part) find length where 2nd mode disappears
+              -> numerical solutions
+              -> compare
+
+    - 2D case -> no analytical soln
+              -> approximate methods
+              -> numerical solution
+              -> ERROR in scaling discuss
+              -> change size until mode disappears compare with 1D 
