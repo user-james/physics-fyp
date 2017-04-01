@@ -76,7 +76,8 @@ int main(int argc, char* argv[]){
 
     /* WAVEGUIDE PROPERTIES */
     double ratio = 1/9.0;
-    double n_out = 3.16, n_in = 3.5;
+    double n_out = 3.0, n_in = 3.2;
+
 /*
     cout << "Construct strip waveguide or core waveguide (s/c)? ";
     cin >> guidetype;

@@ -16,7 +16,7 @@ double gaussian_sq(double);
 double parabola_sq(double);
 
 
-int main(){
+int main(int argc, char* argv[]){
 
     int i = 0;
     int mode = 0;
@@ -29,13 +29,22 @@ int main(){
     int N = 1600, info;
 
     // systems parameters
-    double a = 2e-6;
-    double k = pi/1.55e-6;
-    double n1_sq = pow(3.0, 2), n2_sq = pow(3.1, 2);
-    double step = 1e-7;
-    double start = -8e-5;
+    double width = 1.6e-5;
+    double scale = 1.0;
+    double k = 2*pi/1.55e-6;
+    double n1_sq = pow(3.0, 2), n2_sq = pow(3.2, 2);
+    double step = width/N;
+    double start = -width/2;
     double factor = 1/(k*k*step*step);
-    double ratio = 0.05;                         // defines ratio of domain to be given to waveguide (fixed refractive index only)
+    double ratio = 0.5;                         // defines ratio of domain to be given to waveguide (fixed refractive index only)
+
+    if(argc == 2){
+        ratio = atof(argv[1]);
+        if(ratio > 1 || ratio < 0.1){
+            ratio = 0.5;
+        }
+    }
+    cout << "Ratio = " << ratio << endl;
 
     // create and initialize vector arrays for lapack routine
     vector<double> d, offd, work;
@@ -47,11 +56,11 @@ int main(){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(gaussian_sq(start) - factor);              // left boundary 
+    d.push_back(n_sq(0, left, right, n1_sq, n2_sq) - 2*factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        d.push_back(gaussian_sq(i*step + start) - 2*factor);
+        d.push_back(n_sq(i, left, right, n1_sq, n2_sq) - 2*factor);
     }
-    d.push_back(gaussian_sq(N*step + start) - factor);              // right boundary
+    d.push_back(n_sq(N-1, left, right, n1_sq, n2_sq) -2*factor);              // right boundary
    
     cout << "Gaussian(N) = " << parabola_sq(2e-5) << endl; 
     // set up off diagonal elements
@@ -77,7 +86,7 @@ int main(){
 
         if(mode < 0){break;}
 
-        sprintf(modefile, "../modes/TE%d.txt", mode);
+        sprintf(modefile, "./TE/%.2fE%d.txt", ratio, mode);
         // creates subvector containing one eigenvector
         vector<double> efield(ev.begin() + N*(N-mode-1), ev.begin() + N*(N-mode));
         
@@ -91,12 +100,12 @@ int main(){
         print_to_file(modefile, distance, efield, N);
     }
 
-    cout << "Print E-values to file? (y/n)  " << endl;
+    cout << "Print E-values to file? (y/n)  ";
     cin >> store_evalues;
 
     if(store_evalues[0] == 'y'){
         vector<double> empty;
-        sprintf(indicesfile, "../effective_indices/parabola.txt");
+        sprintf(indicesfile, "./TE/%.2fneff.txt", ratio);
         print_to_file(indicesfile, d, empty, 20); 
     }
 
