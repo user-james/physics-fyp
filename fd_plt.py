@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+from matplotlib.ticker import FormatStrFormatter
 
 
 def plotter(save, pltname):
@@ -14,7 +15,8 @@ def plotter(save, pltname):
             break
 
         data = np.genfromtxt("./modes/TE{:d}.txt".format(mode))
-        
+        #data = np.genfromtxt("./1d_problem/TE/narrow_para_E0.txt")
+
         x = np.linspace(data[0,0], data[-1,0], 801)
         xin = x[300:501]
         xleft = x[:300]
@@ -36,11 +38,13 @@ def plotter(save, pltname):
         if save:
             ax2.legend(fontsize=11, loc=1)
             ax1.legend(fontsize=11, loc=2)
+            ax1.xaxis.set_major_formatter(FormatStrFormatter('%.1e'))
             plt.savefig("./plots/{:s}TE{:d}_fd.jpg".format(pltname, mode))
             plt.close()
         else:
             ax1.legend(fontsize=11, loc=2)
             ax2.legend(fontsize=11, loc=1)
+            ax1.xaxis.set_major_formatter(FormatStrFormatter('%.1e'))
             plt.show()
 
 def inv_para(x):

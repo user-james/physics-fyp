@@ -56,13 +56,12 @@ int main(int argc, char* argv[]){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(n_sq(0, left, right, n1_sq, n2_sq) - 2*factor);              // left boundary 
+    d.push_back(parabola_sq(start) - 2*factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        d.push_back(n_sq(i, left, right, n1_sq, n2_sq) - 2*factor);
+        d.push_back(parabola_sq(start + i*step) - 2*factor);
     }
-    d.push_back(n_sq(N-1, left, right, n1_sq, n2_sq) -2*factor);              // right boundary
+    d.push_back(parabola_sq(-1*start) -2*factor);              // right boundary
    
-    cout << "Gaussian(N) = " << parabola_sq(2e-5) << endl; 
     // set up off diagonal elements
     for(i=0; i<N-1; i++){
         offd.push_back(factor);
@@ -86,7 +85,7 @@ int main(int argc, char* argv[]){
 
         if(mode < 0){break;}
 
-        sprintf(modefile, "./TE/%.2fE%d.txt", ratio, mode);
+        sprintf(modefile, "./TE/narrow_para_E%d.txt", mode);
         // creates subvector containing one eigenvector
         vector<double> efield(ev.begin() + N*(N-mode-1), ev.begin() + N*(N-mode));
         
@@ -105,7 +104,7 @@ int main(int argc, char* argv[]){
 
     if(store_evalues[0] == 'y'){
         vector<double> empty;
-        sprintf(indicesfile, "./TE/%.2fneff.txt", ratio);
+        sprintf(indicesfile, "./TE/narrow_parabola_neff.txt");
         print_to_file(indicesfile, d, empty, 20); 
     }
 
@@ -162,11 +161,11 @@ double gaussian_sq(double x){
 double parabola_sq(double x){
 /*
  Returns squared inverse parabola centred at N/2
- Rather than go negative, this function is discontinuous at +/- 2e-5
- where it goes to zero.
+ Rather than go negative, this function is discontinuous at +/- 2e-6
+ where it goes to 1.
  */
-    if(x < -2e-5 || x>=2e-5){
-        return pow(3.0 - 5e9*x*x, 2);
+    if(x < -2e-6 || x>=2e-6){
+        return pow(3.0 - 5e11*x*x, 2);
     }
     else{
         return 1;

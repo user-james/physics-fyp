@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 
 def inv_para(x):
@@ -23,26 +24,36 @@ if __name__ == '__main__':
     xleft = x[:150]
     xright = x[251:]
 
+    fig, ax = plt.subplots()
+    data = np.sqrt(data)
     count = 0
     for i in data:
         count += 1
-        if i < 3:
-            if count == len(data):
-                plt.plot(x, i*np.ones(len(x)), 'r-', label = r"$n_{eff}$")
+        if i < 3 and i > 1:
+            if count == 1:
+                ax.plot(x, i*np.ones(len(x)), 'r-', label = r"$n_{eff}$")
             else:
-                plt.plot(x, i*np.ones(len(x)), 'r-')
+                ax.plot(x, i*np.ones(len(x)), 'r-')
 
 
-    plt.plot(xin, inv_para(xin), 'b-', label="$Waveguide$")
-    plt.plot(xleft, np.ones(len(xleft)), 'b-')
-    plt.plot(xright, np.ones(len(xright)), 'b-')
+    ax.plot(xin, inv_para(xin), 'b-', label="$Waveguide$")
+    ax.plot(xleft, np.ones(len(xleft)), 'b-')
+    ax.plot(xright, np.ones(len(xright)), 'b-')
     
     save = input("Save file? (y/n) ")
 
     if save[0] == 'y':
-        plt.legend(fontsize = 11)
+        ax.legend(fontsize = 11)
+        ax.set_xlabel(r'$x$')
+        ax.set_ylabel(r'$n(x)$')
+        ax.set_ylim(0.5, 3.2)
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1e'))
         plt.savefig("./effective_indices/{:s}.jpg".format(waveguide))
         plt.show()
     else:
         plt.legend(fontsize = 11)
+        ax.set_xlabel(r'$x$')
+        ax.set_ylabel(r'$n(x)$')
+        ax.set_ylim(0.5, 3.2)
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1e'))
         plt.show()

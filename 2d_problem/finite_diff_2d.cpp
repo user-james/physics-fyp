@@ -14,7 +14,7 @@ extern "C" void dstev_(char* job, int* N, double* D, double* OFFD, double* EV, i
 extern "C" void dsyev_(char* JOB, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* INFO);
 extern "C" void dgeev_(char* JOBVL, char* JOBVR, int* N, double* A, int* LDA, double* WR, double* WI, double* VL, int* LDVL, double* VR, int* LDVR, double* WORK, int* LWORK, int* INFO);
 
-void print_to_file_3d(const char*, vector<double> &, vector<double> &, vector<double> &, int);
+void print_to_file_3d(const char*, vector<double> &, vector<double> &, vector<double> &, int, int);
 void square_guide_setup(vector<double> &, int, double, double, double);
 void strip_loaded_waveguide(vector<double> &, int, double, double, double, double, double, double, double);
 void fd_matrix(vector<double> &, vector<double> &, int, double, double, double, char, char);
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]){
         }else{guidetype = *argv[1];}
         
         mult = atof(argv[2]);
-        cout << mult << endl;
+        //cout << mult << endl;
         if(mult > 1.0 || mult < 0.0){
             mult = 1.0;
         }
@@ -46,10 +46,10 @@ int main(int argc, char* argv[]){
     int n = dim*dim;
     double k = pi/1.55e-6;
     double width = mult*1.6e-4;
-    double strip_w = mult*width/3;//2.5e-5;
+    double strip_w = mult*2*width/3;//2.5e-5;
     double height = mult*1.6e-4;
-    double strip_h = mult*2*height/9;
-    double strip_base_h = mult*height/9;
+    double strip_h = mult*4*height/9;
+    double strip_base_h = mult*2*height/9;
     double dx = width/dim;
     double dy = height/dim;
     vector<double> eps(n, 0);
@@ -103,11 +103,11 @@ int main(int argc, char* argv[]){
     fd_matrix(a, eps, dim, dx, dy, k, mode, field);
 
     
+/*
     for(i=0; i<dim*dim; i++){
         if(i%dim == 0){cout << endl;}       
         cout << eps[i] << "\t";
     }
-/*
     cout << "\n\n\n\n\n";
     cout << setprecision(3);
     for(i=0; i<n*n; i++){
@@ -136,7 +136,7 @@ int main(int argc, char* argv[]){
     /* CREATING POINTS ON X-Y AXIS */ 
     vector<double> x;
     vector<double> y;
-    for(i=int(-dim/2); i<int(dim/2); i++){
+    for(i=int(dim/2); i>int(-dim/2); i--){
         for(j=int(-dim/2); j<int(dim/2); j++){
             y.push_back(i*dy);
             x.push_back(j*dx);
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]){
             efield.push_back(vr[i]);
         }
         sprintf(evectorfile, "./coarse_mesh/%s/T%c/%.3f%c%d.txt", guide_dir, mode, mult, field, j);
-        print_to_file_3d(evectorfile, x, y, efield, n);
+        print_to_file_3d(evectorfile, x, y, efield, n, dim);
         efield.clear();
     }
 
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]){
     return 0;
 }
 
-void print_to_file_3d(const char* filename, vector<double> &x, vector<double> &y, vector<double> &z, int size){
+void print_to_file_3d(const char* filename, vector<double> &x, vector<double> &y, vector<double> &z, int size, int dim){
     /* 
      * Prints data stored in var1 and var2 in two column format in the 
      * file called 'filename', where the length of the arrays var1/2 must
@@ -189,7 +189,11 @@ void print_to_file_3d(const char* filename, vector<double> &x, vector<double> &y
     ofstream myfile(filename);
     int i = 0;
     for(i=0; i<size; i++){
-        myfile << x[i] << "\t" << y[i] << "\t" << z[i] << endl;
+        if(i%dim ==0){
+            myfile << endl;
+        }else{
+            myfile << x[i] << "\t" << y[i] << "\t" << z[i] << endl;
+        }
     }
     myfile.close();
 
@@ -241,11 +245,11 @@ void strip_loaded_waveguide(vector<double> &eps, int dim, double total_w, double
  *      eps -> now loaded with matrix elements representing waveguide at each point in 2D space
  *
  */ 
-    int left = dim*(total_w - strip_w)/(2*total_w); cout <<  "left = " << left <<endl;
-    int right = dim*(total_w + strip_w)/(2*total_w); cout << "right = " << right << endl;
-    int top = dim*(total_h - strip_h - strip_base_h)/(2*total_h); cout << "top = " << top << endl;
-    int mid = dim*(total_h + strip_h - strip_base_h)/(2*total_h); cout << "mid = " << mid << endl;
-    int bottom = dim*(total_h + strip_h + strip_base_h)/(2*total_h); cout << "bottom = " << bottom << endl;
+    int left = dim*(total_w - strip_w)/(2*total_w); //cout <<  "left = " << left <<endl;
+    int right = dim*(total_w + strip_w)/(2*total_w); //cout << "right = " << right << endl;
+    int top = dim*(total_h - strip_h - strip_base_h)/(2*total_h); //cout << "top = " << top << endl;
+    int mid = dim*(total_h + strip_h - strip_base_h)/(2*total_h); //cout << "mid = " << mid << endl;
+    int bottom = dim*(total_h + strip_h + strip_base_h)/(2*total_h); //cout << "bottom = " << bottom << endl;
     int i,j ;
     for(i=0; i< dim; i++){
         for(j = 0; j< dim; j++){
