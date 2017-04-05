@@ -22,7 +22,7 @@ int main(int argc, char* argv[]){
     int mode = 0;
     char modefile[30];
     char indicesfile[30];
-    char store_evalues[5];
+    char store_evalues;
     
     // parameters for lapack
     char job = 'V';
@@ -40,7 +40,7 @@ int main(int argc, char* argv[]){
 
     if(argc == 2){
         ratio = atof(argv[1]);
-        if(ratio > 1 || ratio < 0.1){
+        if(ratio > 1 || ratio < 0.0){
             ratio = 0.5;
         }
     }
@@ -56,11 +56,11 @@ int main(int argc, char* argv[]){
     right = N*(1+ ratio)/2;
     
     // set up diagonal elements
-    d.push_back(parabola_sq(start) - 2*factor);              // left boundary 
+    d.push_back(n_sq(0, left, right, n1_sq, n2_sq) - 2*factor);              // left boundary 
     for(i=1; i<N-1; i++){
-        d.push_back(parabola_sq(start + i*step) - 2*factor);
+        d.push_back(n_sq(i, left, right, n1_sq, n2_sq) - 2*factor);
     }
-    d.push_back(parabola_sq(-1*start) -2*factor);              // right boundary
+    d.push_back(n_sq(N-1, left, right, n1_sq, n2_sq)-2*factor);              // right boundary
    
     // set up off diagonal elements
     for(i=0; i<N-1; i++){
@@ -79,13 +79,13 @@ int main(int argc, char* argv[]){
    
     cout << "Solution found\n";
 
-    while(true){
-        cout << "\nSelect mode number you are interested in: ";
-        cin >> mode;
+    for(mode=0;mode<6;mode++){
+        //cout << "\nSelect mode number you are interested in: ";
+        //cin >> mode;
 
         if(mode < 0){break;}
 
-        sprintf(modefile, "./TE/narrow_para_E%d.txt", mode);
+        sprintf(modefile, "./TE/%.3f_E%d.txt", ratio, mode);
         // creates subvector containing one eigenvector
         vector<double> efield(ev.begin() + N*(N-mode-1), ev.begin() + N*(N-mode));
         
@@ -99,12 +99,13 @@ int main(int argc, char* argv[]){
         print_to_file(modefile, distance, efield, N);
     }
 
-    cout << "Print E-values to file? (y/n)  ";
-    cin >> store_evalues;
+    //cout << "Print E-values to file? (y/n)  ";
+    //cin >> store_evalues;
 
-    if(store_evalues[0] == 'y'){
+    store_evalues = 'y';
+    if(store_evalues == 'y'){
         vector<double> empty;
-        sprintf(indicesfile, "./TE/narrow_parabola_neff.txt");
+        sprintf(indicesfile, "./TE/%.3f_neff.txt", ratio);
         print_to_file(indicesfile, d, empty, 20); 
     }
 
