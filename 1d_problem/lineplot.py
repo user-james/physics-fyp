@@ -20,7 +20,7 @@ if __name__ == '__main__':
         data4 = np.append(data4, np.genfromtxt(name)[3])
         data5 = np.append(data5, np.genfromtxt(name)[4])
 
-    x = np.arange(0.5, 0.0, -.025)*1.6e-5
+    x = np.arange(0.5, 0.0, -.025)*1.6e-5*2
     
 
     ax.plot(x, np.sqrt(data1), label=r"$TE_0$")
@@ -33,7 +33,7 @@ if __name__ == '__main__':
    
     ax.set_xlabel(r'Waveguide Width')
     ax.set_ylabel(r'$n_{eff}$')
-    ax.set_xlim(0.025*1.6e-5, 0.5*1.6e-5)
+    ax.set_xlim(0.05*1.6e-5, 1.6e-5)
     ax.set_ylim(3, 3.22)
     plt.legend(loc = 4)
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1e'))
