@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-
+from matplotlib.ticker import FormatStrFormatter
 
 def plotter(save, pltname):
     '''
@@ -17,7 +17,7 @@ def plotter(save, pltname):
         right = width*ratio/2
         left = -right
 
-        data = np.genfromtxt("./TE/{:.2f}E{:d}.txt".format(ratio, mode))
+        data = np.genfromtxt("./TE/{:.3f}_E{:d}.txt".format(ratio, mode))
         
         x = np.linspace(data[0,0], data[-1,0], 801)
         xin = x[300:501]
@@ -33,8 +33,9 @@ def plotter(save, pltname):
         #ax2.plot(xin, inv_para(xin), 'b-', label="Waveguide")
         #ax2.plot(xleft, np.ones(300), 'b-')
         #ax2.plot(xright, np.ones(300), 'b-')
-        ax1.set_xlabel("x")
-        ax1.set_ylabel("E(x)")
+        ax1.set_xlabel(r"$x$")
+        ax1.set_ylabel(r"$E(x)$")
+        #ax1.set_xlim(-4e-6, 4e-6)
         #ax2.set_ylabel("n(x)")
         ax1.plot(left*np.ones(100), yspace, 'k--')
         ax1.plot(right*np.ones(100), yspace, 'k--')
@@ -42,10 +43,12 @@ def plotter(save, pltname):
         if save:
             #ax2.legend(fontsize=11, loc=1)
             ax1.legend(fontsize=11, loc=2)
-            plt.savefig("./plots/{:s}TE{:d}_fd.jpg".format(pltname, mode))
+            ax1.xaxis.set_major_formatter(FormatStrFormatter('%.0e'))
+            plt.savefig("../important_plots/TE{:d}_fd.jpg".format(mode))
             plt.close()
         else:
             ax1.legend(fontsize=11, loc=2)
+            ax1.xaxis.set_major_formatter(FormatStrFormatter('%.0e'))
             #ax2.legend(fontsize=11, loc=1)
             plt.show()
 
