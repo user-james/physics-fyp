@@ -192,7 +192,7 @@ void print_to_file_3d(const char* filename, vector<double> &x, vector<double> &y
         if(i%dim ==0){
             myfile << endl;
         }else{
-            myfile << x[i] << "\t" << y[i] << "\t" << -z[i] << endl;
+            myfile << x[i] << "\t" << y[i] << "\t" << z[i] << endl;
         }
     }
     myfile.close();
